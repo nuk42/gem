@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>보석 검색</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f2f5;
+            font-family: 'Arial', sans-serif;
+        }
+        .container {
+            text-align: center;
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            display: block;
+            margin: 0 auto;
+        }
+        button {
+            width: 300px;
+            padding: 12px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:disabled {
+            background-color: #a5d6a7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+        }
+        .result img {
+            max-width: 300px;
+            margin-top: 10px;
+        }
+        .gem-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: #fff;
+            padding: 24px 16px;
+            margin: 0 auto;
+            max-width: 320px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .nickname-highlight {
+            color: cyan;
+            font-weight: bold;
+            font-size: 22px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        .gem-name-level {
+            color: black;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 8px;
+        }
+        .spinner {
+            margin: 30px auto 0 auto;
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #4CAF50;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>보석 검색</h2>
+        <input type="text" id="nicknameInput" placeholder="닉네임 입력" />
+        <button id="searchButton" onclick="search()" disabled>검색</button>
+        <div class="result" id="resultBox"></div>
+        <div class="spinner" id="spinner"></div>
+    </div>
+
+    <script>
+        const input = document.getElementById('nicknameInput');
+        const button = document.getElementById('searchButton');
+
+        const roleKorMap = {
+            mafia: '마피아',
+            police: '경찰',
+            doctor: '의사',
+            spy: '스파이',
+            shaman: '영매',
+            soldier: '군인',
+            politician: '정치인',
+            lover: '연인',
+            reporter: '기자',
+            beastman: '짐승인간',
+            gangster: '건달',
+            detective: '사립탐정',
+            robber: '도굴꾼',
+            terrorist: '테러리스트',
+            madam: '마담',
+            priest: '성직자',
+            prophet: '예언자',
+            judge: '판사',
+            thief: '도둑',
+            nurse: '간호사',
+            cult_leader: '교주',
+            vigilante: '자경단원',
+            magician: '마술사',
+            witch: '마녀',
+            scientist: '과학자',
+            hacker: '해커',
+            mentalist: '심리학자',
+            mercenary: '용병',
+            official: '공무원',
+            pretender: '사기꾼',
+            hitman: '청부업자',
+            cabal: '비밀결사',
+            paparazzi: '파파라치',
+            agent: '요원',
+            hypnotist: '최면술사',
+            fortuneteller: '점쟁이'
+        };
+
+        input.addEventListener('input', () => {
+            button.disabled = input.value.trim() === '';
+        });
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && input.value.trim() !== '' && !button.disabled) {
+                search();
+            }
+        });
+
+        async function search() {
+            const nickname = input.value.trim();
+            if (!nickname) return;
+            button.disabled = true;
+            input.disabled = true;
+
+            const spinner = document.getElementById('spinner');
+            const resultBox = document.getElementById('resultBox');
+
+            resultBox.innerHTML = '';
+            spinner.style.display = 'block';
+
+            try {
+                const res = await fetch(`https://proxy-two-rho.vercel.app/api/checkgem?nickname=${encodeURIComponent(nickname)}`);
+                const data = await res.json();
+
+                if (data.nickname) {
+                    const gemInfoDiv = document.createElement('div');
+                    gemInfoDiv.className = 'gem-info';
+
+                    const nicknameEl = document.createElement('div');
+                    nicknameEl.className = 'nickname-highlight';
+                    nicknameEl.textContent = data.nickname;
+                    gemInfoDiv.appendChild(nicknameEl);
+
+                    if (data.role === null || data.level === null) {
+                        const notWornEl = document.createElement('p');
+                        notWornEl.textContent = '미착용';
+                        notWornEl.style.margin = '0';
+                        gemInfoDiv.appendChild(notWornEl);
+                    } else {
+                        const gemInfo = gemImageManager(data.role, data.level);
+                        if (gemInfo) {
+                            const imgEl = document.createElement('img');
+                            imgEl.src = gemInfo.img;
+                            imgEl.alt = gemInfo.name || '보석 이미지';
+                            gemInfoDiv.appendChild(imgEl);
+
+                            if (gemInfo.name) {
+                                const nameEl = document.createElement('div');
+                                nameEl.textContent = `${gemInfo.name} (${gemInfo.level}강)`;
+                                nameEl.className = 'gem-name-level';
+                                gemInfoDiv.appendChild(nameEl);
+                            }
+                        }
+                    }
+                    resultBox.appendChild(gemInfoDiv);
+                } else {
+                    const textEl = document.createElement('p');
+                    textEl.textContent = '검색 결과가 없습니다.';
+                    resultBox.appendChild(textEl);
+                }
+            } catch (err) {
+                const errorEl = document.createElement('p');
+                errorEl.textContent = '오류가 발생했습니다.';
+                resultBox.appendChild(errorEl);
+                console.error(err);
+            } finally {
+                spinner.style.display = 'none';
+                button.disabled = input.value.trim() === '';
+                input.disabled = false;
+            }
+        }
+
+        function gemImageManager(role, level) {
+            if (!role || !level) return false;
+            const nameKor = roleKorMap[role] || role;
+            const imgPath = `images/gem/item_gem_lv${level}_${role}.png`;
+            return {
+                img: imgPath,
+                name: nameKor,
+                level: level
+            };
+        }
+    </script>
+
+</body>
+</html>
